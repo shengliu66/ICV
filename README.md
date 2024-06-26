@@ -51,4 +51,12 @@ python evaluation.py ./logger/main/paradetox/file_name.json paradetox
 
 
 ## Reference
+```
+@article{liu2023context,
+  title={In-context vectors: Making in context learning more effective and controllable through latent space steering},
+  author={Liu, Sheng and Xing, Lei and Zou, James},
+  journal={ICML},
+  year={2024}
+}
+```
 For technical details and full experimental results, please check [our paper](https://arxiv.org/abs/2311.06668).
