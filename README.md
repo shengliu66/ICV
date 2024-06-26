@@ -16,6 +16,14 @@ Overview of our proposed In-Context Vector (ICV) approach. Our method involves a
 </figcaption>
 </p>
 
+## Get started
+### create a new environment
+
+```conda create -n icv python=3.9```
+
+###  prepare the basic environments
+```pip install -r requirements.txt```
+
 
 ## Usage
 
