@@ -60,7 +60,7 @@ python evaluation.py ./logger/main/paradetox/file_name.json paradetox
 
 ### Citation
 ```
-@article{liu2023context,
+@article{liu2024context,
   title={In-context vectors: Making in context learning more effective and controllable through latent space steering},
   author={Liu, Sheng, and Ye, Haotian, and Xing, Lei and Zou, James},
   booktitle={International Conference on Machine Learning},
