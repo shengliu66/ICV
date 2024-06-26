@@ -16,5 +16,39 @@ Overview of our proposed In-Context Vector (ICV) approach. Our method involves a
 </figcaption>
 </p>
 
+
+## Usage
+
+# Data
+Download the [paradetox](https://github.com/s-nlp/paradetox) dataset from huggingface. 
+
+# Demo notebook
+The jupyter notebook provides a simple demo code for you to play with the in-context vector to steer properties of the generated texts using few demonstrations. 
+
+# Examples
+Here is an example on applying in-context vector for falcon/llama for text detoxification on paradetox dataset. 
+
+```
+python task_style_vector.py \
+	    --dataset paradetox \
+	    --prompt_version default \
+	    --exemplar_method random \
+	    --num_k_shots 5 \
+	    --model_type falcon \
+	    --model_size 7b \
+	    --batch_size 1 \
+	    --gpus 0 \
+	    --in_8bit True \
+	    --lam $lam \
+	    --seed 0
+```
+
+For evaluation, you can run the following 
+
+```
+python evaluation.py ./logger/main/paradetox/file_name.json paradetox
+```
+
+
 ## Reference
 For technical details and full experimental results, please check [our paper](https://arxiv.org/abs/2311.06668).

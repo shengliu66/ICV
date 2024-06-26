@@ -70,19 +70,34 @@ class TokenizedForStyleRightPad(Dataset):
         e = self.tok(demonstration)
         return torch.LongTensor(e["input_ids"]), torch.LongTensor(e["attention_mask"])  # no padding
 
-    def tokenize_each_demonstration(self, demonstration_list, dataset_name=None):
+
+
+    def tokenize_each_demonstration(self, demonstration_list, dataset_name=None, prefix = None):
+        special_characters = [
+            "~", " ~", "~ ", "!", " !", "! ", "@", " @", "@ ", "#", " #", "# ", 
+            "$", " $", "$ ", "%", " %", "% ", "^", " ^", "^ ", "&", " &", "& ", 
+            "*", " *", "* ", "(", " (", "( ", ")", " )", ") ", "_", " _", "_ ", 
+            "+", " +", "+ ", "`", " `", "` ", "-", " -", "- ", "=", " =", "= ", 
+            "{", " {", "{ ", "}", " }", "} ", "[", " [", "[ ", "]", " ]", "] ", 
+            "|", " |", "| ", "\\", " \\", "\\ ", ":", " :", ": ", ";", " ;", "; ", 
+            "\"", " \"", "\" ", "'", " '", "' ", "<", " <", "< ", ">", " >", "> ", 
+            ",", " ,", ", ", ".", " .", ". ", "?", " ?", "? ", "/", " /", "/ "
+        ]
+
+        def strip_special_characters(input_string):
+            for char in special_characters:
+                input_string = input_string.replace(char.strip(), '')
+            return input_string.strip()
+
         tokenized_demonstration_list = []
         for exp_id in range(len(demonstration_list)):
-            demonstration_list[exp_id] = (demonstration_list[exp_id][0].strip(" .").strip("."), demonstration_list[exp_id][1].strip(" .").strip("."))
-
+            if prefix is not None:
+                demonstration_list[exp_id] = (prefix[0] + strip_special_characters(demonstration_list[exp_id][0]), prefix[1] + strip_special_characters(demonstration_list[exp_id][1]))
+            else:
+                demonstration_list[exp_id] = (strip_special_characters(demonstration_list[exp_id][0]), strip_special_characters(demonstration_list[exp_id][1]))
             e_original = self.tok(demonstration_list[exp_id][0]) 
             e_rewrite = self.tok(demonstration_list[exp_id][1])
             tokenized_demonstration_list.append((e_original, e_rewrite)) 
-        # if dataset_name == 'formality':
-        #     tokenized_demonstration_list.append((self.tok('reading this rly makes u think'),self.tok('This was a remarkably thought-provoking read.')))
-        #     tokenized_demonstration_list.append((self.tok('those are cocky girls.'),self.tok('Those are arrogant women.')))
-        #     tokenized_demonstration_list.append((self.tok('you would be genuinly suprised.'),self.tok('You would be genuinly suprised.')))
-        #     tokenized_demonstration_list.append((self.tok('IT DOESN\'T MEAN'),self.tok('It doesn\'t mean')))
         return tokenized_demonstration_list
 
     def tokenize(self, only_query, full_text, no_padding = False):
@@ -119,19 +134,7 @@ class TokenizedForStyleRightPad(Dataset):
             return torch.LongTensor(es["input_ids"]), torch.LongTensor(es["attention_mask"]), self.references[idx]
         else:
             return es
-        # def _get_one_item(e,r):
-        #     return torch.LongTensor(e["input_ids"]), torch.LongTensor(e["attention_mask"]), torch.LongTensor(r)
 
-        # es = self.data[idx]
-
-        # if self.references is not None:
-        #     rs = self.references[idx]
-
-        # if isinstance(es, list):
-        #     return [_get_one_item(e,r) for e,r in zip(es,rs)]
-        # else:
-        #     es['reference'] = rs
-        #     return es
 
 if __name__ == "__main__":
     from anchor import hf_datasets_root

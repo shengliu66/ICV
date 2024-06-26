@@ -52,7 +52,7 @@ def mk_parser():
     psr.add_argument("--dataset", type=str, choices=task_mapper.keys())
     psr.add_argument("--data_file", type=str)
 
-    psr.add_argument("--model_type", type=str, choices=["opt", "gpt2", "e-gpt", "bloom", "falcon", "llama"])
+    psr.add_argument("--model_type", type=str, choices=["falcon", "llama", "llama-2", "vicuna", "llama-13b"])
     psr.add_argument("--model_size", type=str)
 
     psr.add_argument("--gpus", type=str, default="0")
@@ -63,10 +63,8 @@ def mk_parser():
     psr.add_argument("--exemplar_method", type=str, default="random", choices=["random", "written", "stratified"])
     # if `num_base_shot` is set, `num_k_shot * num_base_shot` is the number of exemplars to be sampled
     psr.add_argument("--num_k_shots", type=int, default=1)
-    psr.add_argument("--alpha", type=float, default=0.8)
+    psr.add_argument("--lam", type=float, default=0.8)
     psr.add_argument("--rank", type=int, default=1)
-
-
     return psr
 
 

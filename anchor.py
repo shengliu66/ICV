@@ -10,6 +10,6 @@ dump_root = root.joinpath("dump")
 
 # modify to /your/folder/contains/huggingface/cache
 # the default may be `~/.cache/huggingface/transformers`
-checkpoints_root = Path(".cache/huggingface/transformers")
+checkpoints_root = Path("/gpfs/data/razavianlab/home/sl5924/llm/.cache/huggingface/transformers")
 
 hf_datasets_root = root.joinpath("datasets")

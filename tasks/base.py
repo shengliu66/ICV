@@ -12,10 +12,11 @@ from anchor import hf_datasets_root
 from tasks.loader import TokenizedForStyleRightPad
 from utils.rng_ctx import RandomContext, EmptyContext
 from utils.pca import PCA
-from utils.context_manager import modified_forward_context_manager, traced_forward_context_manager
-from utils.latent_shifter import LatentShifter
-logger = logging.getLogger("task")
 
+from utils.forward_tracer import ForwardTrace
+from utils.forward_tracer import ForwardTracer
+
+logger = logging.getLogger("task")
 
 class BaseProbInference:
     def __init__(self, prompt_version):
@@ -44,10 +45,6 @@ class BaseProbInference:
         self._rng_context = RandomContext(seed=seed)
 
     def dataset_signature(self):
-        # {
-        #      "result":  (dataset_name, subset, split),  # which produce the final result
-        #      "sample": (dataset_name, subset, split),  # which we sample ICL few-shot examples
-        # }
         raise NotImplementedError
 
     def dataset_part(self, part):
@@ -89,7 +86,7 @@ class BaseProbInference:
         ex_list = [e["query"] for e in sampled]
 
         self._cached_prefix = prefix
-        self._cached_ex_list = ex_list
+        self._cached_ex_list = ex_list.copy()
         return self.build_exemplar_from_examples(prefix, ex_list)
 
     def stratified_sampling(self, num_k_shots):
@@ -244,59 +241,59 @@ class BaseProbInference:
                 return f"{exemplar_str}{with_query}", f"{exemplar_str}{with_query_and_paraphrase}"
 
         return TokenizedForStyleRightPad(self.raw_data_result, tokenizer, add_demostration, no_padding=no_padding)
+    
+    @staticmethod
+    def standardize(tensor, dim=0):
+        means = tensor.mean(dim=dim, keepdim=True)
+        stds = tensor.std(dim=dim, unbiased=False, keepdim=True)
+        return (tensor - means) / stds
 
     @staticmethod
-    def modified_forward(model, inputs, forward_modifiers = ()):
-        context_manager = modified_forward_context_manager(model, forward_modifiers=forward_modifiers)
-        input_ids = torch.tensor(inputs['input_ids'])
-        attention_mask = torch.tensor(inputs['attention_mask'])
-        with context_manager:
-            outputs = model(
-                input_ids=input_ids.unsqueeze(0).cuda(),
-                attention_mask=attention_mask.unsqueeze(0).cuda(),
-            )
-
-        return outputs
-
-    @staticmethod
-    def traced_forward(model, inputs, forward_modifiers = (), with_submodules=False):
-        context_manager, forward_trace = traced_forward_context_manager(model, with_submodules=with_submodules)
-        with context_manager:
-            outputs = BaseProbInference.modified_forward(
-                model,
-                inputs=inputs,
-                forward_modifiers=forward_modifiers,
-            )
-
-        return outputs, forward_trace
-
-    @staticmethod
-    def get_latentstates(model, inputs):
+    def get_hiddenstates(model, inputs):
         h_all = []
+
         for example_id in range(len(inputs)):
-            latents_for_all_styles= []
+            embeddings_for_all_styles= []
             for style_id in range(len(inputs[example_id])):
-                _, forward_trace = BaseProbInference.traced_forward(model, inputs[example_id][style_id], with_submodules=False)
-                task_latents = forward_trace.residual_stream.hidden[:, :, -1, :] # get last token
-                task_latents = task_latents[:, 1:]  # the first one is the embedding layer (num_data, num_layers, hidden_size)
-                latents_for_all_styles.append(task_latents)
-            h_all.append(tuple(latents_for_all_styles))
+                forward_trace = ForwardTrace()
+                context_manager = ForwardTracer(model, forward_trace)
+                with context_manager:
+                    _ = model(
+                    input_ids=torch.tensor(inputs[example_id][style_id]['input_ids']).unsqueeze(0).cuda(), 
+                    attention_mask = torch.tensor(inputs[example_id][style_id]['attention_mask']).unsqueeze(0).cuda(), 
+                    output_attentions=False,
+                    output_hidden_states=False
+                    )
+                    h = forward_trace.residual_stream.hidden
+                embedding_token = []
+                for layer in range(len(h)):
+                    embedding_token.append(h[layer][:,-1])
+                embedding_token = torch.cat(embedding_token, dim=0).cpu().clone()
+                embeddings_for_all_styles.append(embedding_token)
+            h_all.append(tuple(embeddings_for_all_styles))
         return h_all
 
+    
     @staticmethod
-    def get_icv(model, inputs, rank=1):
-        hidden_states = BaseProbInference.get_latentstates(model, inputs)
-        _, num_layers, hidden_dim = hidden_states[0][0].size()
+    def obtain_icv(model, inputs, rank=1):
+        hidden_states = BaseProbInference.get_hiddenstates(model, inputs) #each element, layer x len_tokens x dim
+        num_demonstration = len(hidden_states)
+        neg_all = []
+        pos_all = []
 
         hidden_states_all = []
-        num_demonstration = len(hidden_states)
+
         for demonstration_id in range(num_demonstration):
-            h = hidden_states[demonstration_id][0].flatten() - hidden_states[demonstration_id][1].flatten()
+            h = hidden_states[demonstration_id][1].view(-1) - hidden_states[demonstration_id][0].view(-1)
             hidden_states_all.append(h)
-        
-        fit_data = torch.stack(hidden_states_all)        
+            neg_all.append(hidden_states[demonstration_id][0].view(-1))
+            pos_all.append(hidden_states[demonstration_id][1].view(-1))
+        fit_data = torch.stack(hidden_states_all)
+        neg_emb = torch.stack(neg_all).mean(0)
+        pos_emb = torch.stack(pos_all).mean(0)
+
         pca = PCA(n_components=rank).to(fit_data.device).fit(fit_data.float())
-
-        direction = (pca.components_.sum(dim=0,keepdim=True) + pca.mean_).mean(0)
-
-        return direction.view(num_layers, hidden_dim)   
+        eval_data =  pca.transform(fit_data.float())
+        h_pca = pca.inverse_transform(eval_data) 
+        direction = (pca.components_.sum(dim=0,keepdim=True) + pca.mean_).mean(0).view(hidden_states[demonstration_id][0].size(0), hidden_states[demonstration_id][0].size(1))#h_pca.mean(0).view(hidden_states[demonstration_id][0].size(0), hidden_states[demonstration_id][0].size(1))
+        return direction, (neg_emb).view(hidden_states[demonstration_id][0].size(0), hidden_states[demonstration_id][0].size(1))
