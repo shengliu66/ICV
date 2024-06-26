@@ -1,0 +1,15 @@
+accelerate==0.21.0
+accelerate==0.25.0
+evaluate==0.4.0
+fschat==0.2.35
+nltk==3.8.1
+numpy==1.25.2
+openai==1.35.5
+parlai==1.7.2
+peft==0.5.0
+python-dotenv==1.0.1
+Requests==2.32.3
+torch==2.1.2
+tqdm==4.66.2
+tqdm==4.66.4
+transformers==4.37.2
