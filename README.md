@@ -39,7 +39,7 @@ python task_style_vector.py \
 	    --batch_size 1 \
 	    --gpus 0 \
 	    --in_8bit True \
-	    --lam $lam \
+	    --lam 0.1 \
 	    --seed 0
 ```
 
