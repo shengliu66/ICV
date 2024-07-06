@@ -1,14 +1,5 @@
 #!/bin/bash
 
-#SBATCH --partition=a100_short
-##SBATCH --mail-type=END,FAIL      
-##SBATCH --mail-user=sl5924@nyu.edu     
-#SBATCH --ntasks=1            
-#SBATCH --mem-per-cpu=64G                   
-#SBATCH --time=24:00:00               
-#SBATCH --output=slurm_%j.out
-#SBATCH --gres=gpu:1
-#SBATCH --exclude=a100-4010
 
 lam=$1
 model=$2
