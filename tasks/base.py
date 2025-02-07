@@ -35,7 +35,7 @@ class BaseProbInference:
 
         self._cached_prefix = None
         self._cached_ex_list = None
-        self._cahced_selected_exemplar = None
+        self._cached_selected_exemplar = None
         self.shuffled_mapping = None
 
     def default_prompt_version(self):
@@ -81,7 +81,7 @@ class BaseProbInference:
             num_shots = min(len(self.raw_data_sample), num_shots)
             sampled = random.sample(self.raw_data_sample, num_shots)
 
-        self._cahced_selected_exemplar = sampled
+        self._cached_selected_exemplar = sampled
 
         ex_list = [e["query"] for e in sampled]
 
@@ -119,7 +119,7 @@ class BaseProbInference:
             random.shuffle(selected_ids)
 
         selected_exemplar = [self.raw_data_sample[i] for i in selected_ids]
-        self._cahced_selected_exemplar = selected_exemplar
+        self._cached_selected_exemplar = selected_exemplar
         ex_list = [e["query"] for e in selected_exemplar]
 
         self._cached_prefix = prefix
@@ -223,7 +223,7 @@ class BaseProbInference:
         return TokenizedForStyleRightPad(self.raw_data_dev, tokenizer, self.paralell_style_promptify)
 
     def mk_finetune_dataset(self, tokenizer, mode = 'ft'):
-        selected_exemplar = self._cahced_selected_exemplar
+        selected_exemplar = self._cached_selected_exemplar
         assert (selected_exemplar != None), "No demonstration is selected yet, run stratified_sampling first! \n"
         return TokenizedForStyleRightPad(selected_exemplar, tokenizer, self.paralell_style_promptify, mode=mode)
 
